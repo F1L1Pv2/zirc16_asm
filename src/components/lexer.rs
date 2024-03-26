@@ -24,7 +24,7 @@ pub struct Lexem{
 }
 
 impl Lexem{
-    fn new(value: String, ttype: LexemType, row: usize, col: usize) -> Lexem{
+    pub fn new(value: String, ttype: LexemType, row: usize, col: usize) -> Lexem{
         Lexem { value, ttype, row, col}
     }
 }
@@ -164,8 +164,6 @@ impl Lexer<'_>{
     }
 
     fn chop_string(self: &mut Self) -> bool{
-        let mut lexem: String = String::new();
-
         let row = self.row;
         let col = self.col;
 

@@ -52,8 +52,6 @@ fn main() {
 
     parser.parse();
 
-    // dbg!(&parser.tokens);
-
     let mut codegen: CodeGen = CodeGen::new(&source_filename,&parser.tokens, &instruction_lexer.instructions);
 
     codegen.gen();

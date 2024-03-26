@@ -1,4 +1,6 @@
-use crate::{expect_lexem_type, Lexem, LexemType};
+use std::collections::HashMap;
+
+use crate::{expect_lexem_type, get_value_from_number_token, Lexem, LexemType};
 
 #[derive(Debug)]
 pub enum Token{
@@ -191,5 +193,134 @@ impl Parser<'_>{
         while self.cursor < self.lexems.len(){
             self.parse_token()
         }
+
+        let mut origin: usize = 0;
+        self.cursor = 0;
+
+        let mut cleaned_tokens: Vec<Token> = Vec::new();
+
+        let mut labels: HashMap<String, usize> = HashMap::new();
+
+        for token in self.tokens.iter(){
+            match token{
+                Token::Instruction { name, args } => {
+
+                    if name.value.to_lowercase() == "org"{
+                        if args.len() != 1{
+                            println!("{}:{}:{} you need to provide addr", self.source_filename, name.row, name.col);
+                            std::process::exit(1);
+                        }
+
+                        let arg = args[0].clone();
+                        if !matches!(arg.ttype, LexemType::Number { .. }){
+                            println!("{}:{}:{} Expected number got {:?}", self.source_filename, arg.row, arg.col, arg.ttype);
+                            std::process::exit(1);
+                        }
+
+                        origin = get_value_from_number_token(self.source_filename, &arg);
+                        self.cursor = 0;
+                        continue;
+                    }
+
+                    let name = name.clone();
+                    let args = args.clone();
+
+                    if name.value.to_lowercase() == "dw"{
+                        
+                        let mut to_add = 0;
+
+                        for arg in args.iter(){
+                            match arg.ttype{
+                                LexemType::Ident => to_add += 1,
+                                LexemType::String => to_add += arg.value.len()*2,
+                                LexemType::Number { .. } => to_add += 1,
+                                _ => {
+                                    println!("{}:{}:{} Unexpected token {:?}", self.source_filename, arg.row, arg.col, arg.ttype);
+                                }
+                            }
+                        }
+
+                        cleaned_tokens.push(Token::Instruction { name, args });
+                        self.cursor += to_add;
+                        continue;
+                    }
+
+                    if name.value.to_lowercase() == "dd"{
+                        
+                        let mut to_add = 0;
+
+                        for arg in args.iter(){
+                            match arg.ttype{
+                                LexemType::Ident => to_add += 2,
+                                LexemType::String => to_add += arg.value.len()*4,
+                                LexemType::Number { .. } => to_add += 2,
+                                _ => {
+                                    println!("{}:{}:{} Unexpected token {:?}", self.source_filename, arg.row, arg.col, arg.ttype);
+                                }
+                            }
+                        }
+
+                        cleaned_tokens.push(Token::Instruction { name, args });
+                        self.cursor += to_add;
+                        continue;
+                    }
+
+                    if name.value.to_lowercase() == "dq"{
+                        
+                        let mut to_add = 0;
+
+                        for arg in args.iter(){
+                            match arg.ttype{
+                                LexemType::Ident => to_add += 4,
+                                LexemType::String => to_add += arg.value.len()*8,
+                                LexemType::Number { .. } => to_add += 4,
+                                _ => {
+                                    println!("{}:{}:{} Unexpected token {:?}", self.source_filename, arg.row, arg.col, arg.ttype);
+                                }
+                            }
+                        }
+
+                        cleaned_tokens.push(Token::Instruction { name, args });
+                        self.cursor += to_add;
+                        continue;
+                    }
+
+                    cleaned_tokens.push(Token::Instruction { name, args });
+                    self.cursor += 1;
+
+                }
+                Token::Label { name } => {
+                    labels.insert(name.value.clone(), origin+self.cursor);
+                }
+            }
+        }
+
+        for arg in cleaned_tokens.iter_mut(){
+            match arg{
+                Token::Instruction { name: _, args } =>{
+                    for arg in args{
+                        if arg.ttype == LexemType::Ident{
+                            let fix_addr = match labels.get(&arg.value){
+                                Some(x) => x,
+                                None => {
+                                    println!("{}:{}:{} use of undeclared label {}", self.source_filename, arg.row, arg.col, arg.value);
+                                    std::process::exit(1);
+                                }
+                            };
+                             
+                            *arg = Lexem::new(format!("{}",fix_addr),LexemType::Number { radix: 10 },arg.row,arg.col);
+
+                        }
+                    }
+                }
+                Token::Label { .. } => {
+                    println!("Internal error labels shouldve been removed in this stage");
+                    std::process::exit(1);
+                }
+            }
+        }
+
+        self.tokens = cleaned_tokens;
+
     }
 }
