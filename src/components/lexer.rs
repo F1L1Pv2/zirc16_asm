@@ -221,11 +221,40 @@ impl Lexer<'_>{
         return true;
     }
 
+    fn seek_comments(self: &mut Self){
+        
+        let initial_cursor = self.cursor;
+
+        if self.content.len() - self.cursor >= 2{
+
+
+
+            let test = self.chop().to_string() + self.chop().to_string().as_str();
+            if test == "//"{
+                if self.cursor >= self.content.len(){
+                    return;
+                }
+                while self.peek().unwrap() != '\n'{
+                    if self.cursor >= self.content.len(){
+                        return;
+                    }   
+                    self.chop();
+                }
+            }else{
+                self.cursor = initial_cursor;
+                return;
+            }
+        }
+
+    }
+
     fn chop_lexem(self: &mut Self){
 
-        self.seek_whitespace();
-
         if self.cursor >= self.content.len() {return}
+        
+        self.seek_whitespace();
+        self.seek_comments();
+
 
         if self.chop_single() {return}
 
