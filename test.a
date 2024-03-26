@@ -1,5 +1,8 @@
 main:
+    hlt
     lim R1, stack
     lim R2, 5
     psh R1, R2
+data:
+    ballz: dw "Hello World!\n",0
 stack:

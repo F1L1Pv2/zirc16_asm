@@ -10,7 +10,9 @@ pub enum LexemType{
     Single,
     Number{
         radix: usize
-    }
+    },
+    String,
+    NewLine
 }
 
 #[derive(Debug, Clone)]
@@ -75,12 +77,19 @@ impl Lexer<'_>{
     }
 
     fn seek_whitespace(self: &mut Self){
-        while self.cursor < self.content.len() && self.peek().unwrap().is_whitespace(){
+        while self.cursor < self.content.len() && self.peek().unwrap().is_whitespace() && self.peek().unwrap() != '\n'{
             self.chop();
         }
     }
 
     fn chop_single(self: &mut Self) -> bool{
+        if self.peek().unwrap() == '\n'{
+            let row = self.row;
+            let col = self.col;
+            let ch = self.chop();
+            self.lexems.push(Lexem::new(ch.to_string(), LexemType::NewLine, row, col));
+            return true;
+        }
         if SINGLE_LEXEMS.contains(&self.peek().unwrap()) {
             let row = self.row;
             let col = self.col;
@@ -154,6 +163,64 @@ impl Lexer<'_>{
         return true;
     }
 
+    fn chop_string(self: &mut Self) -> bool{
+        let mut lexem: String = String::new();
+
+        let row = self.row;
+        let col = self.col;
+
+        let initial_cursor = self.cursor;
+
+        if self.cursor >= self.content.len(){
+            return false;
+        }
+
+        if self.peek().unwrap() != '\"' && self.peek().unwrap() != '\''{
+            self.cursor = initial_cursor;
+            return false;
+        }
+
+        self.chop();
+
+        let mut value = String::new();
+
+        while self.peek().unwrap() != '\"' && self.peek().unwrap() != '\''{
+            if self.cursor >= self.content.len(){
+                println!("{}:{}:{} Expected \" got end of file", self.source_filename, self.row, self.col);
+                std::process::exit(1);
+            }
+
+            if self.peek().unwrap() == '\\'{
+                self.chop();
+                if self.cursor >= self.content.len(){
+                    println!("{}:{}:{} Expected something got end of file", self.source_filename, self.row, self.col);
+                    std::process::exit(1);
+                }
+                match self.chop(){
+                    'n' => value += "\n",
+                    '0' => value += "\0",
+                    '\\' => value += "\\",
+                    '\"' => value += "\"",
+                    '\'' => value += "\'",
+                     a  => {
+                        println!("{}:{}:{} Unexpected character {}", self.source_filename, self.row, self.col, a);
+                     }
+                };
+
+                continue;
+
+            }
+
+            value += self.chop().to_string().as_str();
+        }
+
+        self.chop();
+
+        self.lexems.push(Lexem { value, ttype: LexemType::String, row, col });
+
+        return true;
+    }
+
     fn chop_lexem(self: &mut Self){
 
         self.seek_whitespace();
@@ -162,7 +229,10 @@ impl Lexer<'_>{
 
         if self.chop_single() {return}
 
+        if self.chop_string() {return}
+
         if self.chop_word() {return}
+
         
         println!("{}:{}:{} unexpected character: \"{}\" at {}", self.source_filename, self.row, self.col, self.peek().unwrap(), self.cursor);
         std::process::exit(1);

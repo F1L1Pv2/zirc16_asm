@@ -38,6 +38,15 @@ impl Parser<'_>{
         Some(self.lexems[self.cursor].clone())
     }
 
+    fn chop_newline(self: &mut Self){
+        while self.peek_lexem().unwrap().ttype == LexemType::NewLine{
+            if self.cursor >= self.lexems.len(){
+                return;
+            }
+            self.chop_lexem();
+        }
+    }
+
     fn chop_lexem(self: &mut Self) -> Lexem{
         let lexem = self.peek_lexem().unwrap();
         self.cursor += 1;
@@ -45,8 +54,16 @@ impl Parser<'_>{
     }
 
     fn parse_lexem_label(self: &mut Self) -> bool{
-
+        
         let initial_cursor = self.cursor;
+        
+        self.chop_newline();
+
+        if self.cursor >= self.lexems.len(){
+            self.cursor = initial_cursor;
+            return false;
+        }
+
 
         if self.peek_lexem().unwrap().ttype != LexemType::Ident{
             self.cursor = initial_cursor;
@@ -82,8 +99,11 @@ impl Parser<'_>{
             return  Some(Vec::new());
         }
 
+        if self.peek_lexem().unwrap().ttype == LexemType::NewLine{
+            return Some(Vec::new());
+        }
+
         if !expect_lexem_type(&self.peek_lexem().unwrap(), arg_types) {
-            // return None;
             let lexem = self.peek_lexem().unwrap();
             println!("{}:{}:{} Expected arg got {:?}", self.source_filename, lexem.row, lexem.col, lexem.ttype);
             std::process::exit(1);
@@ -112,6 +132,10 @@ impl Parser<'_>{
 
             args.push(arg);
 
+            if self.cursor < self.lexems.len() && self.peek_lexem().unwrap().ttype == LexemType::NewLine{
+                break;
+            }
+
         }
 
         return Some(args);
@@ -119,8 +143,16 @@ impl Parser<'_>{
 
     fn parse_lexem_instruction(self: &mut Self) -> bool{
 
+        
         let initial_cursor = self.cursor;
+        
+        self.chop_newline();
 
+        if self.cursor >= self.lexems.len(){
+            self.cursor = initial_cursor;
+            return false;
+        }
+        
         if self.peek_lexem().unwrap().ttype != LexemType::Ident{
             self.cursor = initial_cursor;
             return false;
