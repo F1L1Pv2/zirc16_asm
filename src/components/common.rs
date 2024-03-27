@@ -58,6 +58,6 @@ pub const PSEUDO_INSTRUCTIONS: phf::Map<&'static str, &'static str> = phf_map!{
         xor a, b
     ",
     "lsh rd" => "
-        add rd, r0
+        add rd, rd
     "
 };
