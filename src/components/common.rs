@@ -56,5 +56,8 @@ pub const PSEUDO_INSTRUCTIONS: phf::Map<&'static str, &'static str> = phf_map!{
     "mov a,b" => "
         xor a, a
         xor a, b
+    ",
+    "lsh rd" => "
+        add rd, r0
     "
 };

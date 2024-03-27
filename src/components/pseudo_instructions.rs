@@ -11,9 +11,9 @@ impl PseudoInstructions{
         let mut pseudo_instructions_parser: Parser = Parser::new();
 
         let mut pseudo_instructions: HashMap<String, (Vec<String>,Vec<Token>)> = HashMap::new();
-        let mut p_args = Vec::new();
-
+        
         for (name, code) in PSEUDO_INSTRUCTIONS.entries(){
+            let mut p_args = Vec::new();
             let name = *name;
             let code = *code;
 
