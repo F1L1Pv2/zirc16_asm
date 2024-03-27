@@ -261,7 +261,7 @@ impl Parser{
                                         };
                                         new_args.push(new_arg);
                                     }
-                                    after_pseudo.push(Token::Instruction { name, args: new_args });
+                                    after_pseudo.push(Token::Instruction { name: Lexem::new(name.value, name.ttype, pseudo_name.row, pseudo_name.col), args: new_args });
                                 }
                                 Token::Label { name } => {
                                     println!("{}:{}:{} Currently labels are not possible inside pseudo instruction: {}", "PSEUDO_INSTRUCTION: ".to_string()+pseudo_name.value.as_str(), pseudo_name.row, pseudo_name.col, name.value);
