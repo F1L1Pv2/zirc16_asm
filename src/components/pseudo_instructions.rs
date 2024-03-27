@@ -19,11 +19,11 @@ impl PseudoInstructions{
 
             let pure_name = name.split(" ").collect::<Vec<&str>>()[0];
 
-            let source_filename = "PSEUDO_INSTRUCTION_NAME: ".to_string() + pure_name;
+            let source_filename = "PSEUDO_INSTRUCTION_NAME_".to_string() + pure_name.to_uppercase().as_str();
 
             pseudo_instructions_lexer.lex(&source_filename, name);
 
-            pseudo_instructions_parser.first_stage_parse(&source_filename, &pseudo_instructions_lexer.lexems);
+            pseudo_instructions_parser.first_stage_parse(&pseudo_instructions_lexer.lexems);
 
             if pseudo_instructions_parser.tokens.len() > 1{
                 println!("PSEUDO_INSTRUCTIONS: You can only have one name per pseudoinstruction");
@@ -43,11 +43,11 @@ impl PseudoInstructions{
             }
 
 
-            let source_filename = "PSEUDO_INSTRUCTION_CODE: ".to_string() + pure_name;
+            let source_filename = "PSEUDO_INSTRUCTION_CODE_".to_string() + pure_name.to_uppercase().as_str();
 
             pseudo_instructions_lexer.lex(source_filename.as_str(), code);
 
-            pseudo_instructions_parser.first_stage_parse(source_filename.as_str(), &pseudo_instructions_lexer.lexems);
+            pseudo_instructions_parser.first_stage_parse(&pseudo_instructions_lexer.lexems);
 
             pseudo_instructions.insert(pure_name.to_string(), (p_args.clone(),pseudo_instructions_parser.tokens.clone()));
 

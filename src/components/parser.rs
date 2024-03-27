@@ -25,7 +25,6 @@ impl std::fmt::Display for Token{
 }
 
 pub struct Parser{
-    source_filename: String,
     cursor: usize,
     lexems: Vec<Lexem>,
     pub tokens: Vec<Token>
@@ -34,7 +33,6 @@ pub struct Parser{
 impl Parser{
     pub fn new() -> Parser{
         Parser{
-            source_filename: String::new(),
             cursor: 0,
             lexems: Vec::new(),
             tokens: Vec::new()
@@ -118,7 +116,7 @@ impl Parser{
 
         if !expect_lexem_type(&self.peek_lexem().unwrap(), arg_types) {
             let lexem = self.peek_lexem().unwrap();
-            println!("{}:{}:{} Expected arg got {}", self.source_filename, lexem.row, lexem.col, lexem.ttype);
+            println!("{}:{}:{} Expected arg got {}", lexem.filename, lexem.row, lexem.col, lexem.ttype);
             std::process::exit(1);
         }
 
@@ -132,14 +130,14 @@ impl Parser{
             let x = self.chop_lexem();
 
             if self.cursor >= self.lexems.len(){
-                println!("{}:{}:{} Expected arg got end of file", self.source_filename, x.row, x.col+1);
+                println!("{}:{}:{} Expected arg got end of file", x.filename, x.row, x.col+1);
                 std::process::exit(1);
             }
 
             let arg = self.chop_lexem();
 
             if !expect_lexem_type(&arg, arg_types){
-                println!("{}:{}:{} Expected arg got {}", self.source_filename, arg.row, arg.col, arg.ttype);
+                println!("{}:{}:{} Expected arg got {}", arg.filename, arg.row, arg.col, arg.ttype);
                 std::process::exit(1);
             }
 
@@ -199,13 +197,12 @@ impl Parser{
         }
 
         let lexem = self.peek_lexem().unwrap();
-        println!("{}:{}:{} got unexpected token {}", self.source_filename, lexem.row, lexem.col, lexem.value);
+        println!("{}:{}:{} got unexpected token {}", lexem.filename, lexem.row, lexem.col, lexem.value);
         // dbg!(&self.tokens);
         std::process::exit(1);
     }
 
-    pub fn first_stage_parse<'a>(self: &mut Self, source_filename: &'a str, lexems: &Vec<Lexem>){
-        self.source_filename = source_filename.to_string();
+    pub fn first_stage_parse<'a>(self: &mut Self, lexems: &Vec<Lexem>){
         self.lexems = lexems.clone();
         self.cursor = 0;
 
@@ -216,9 +213,9 @@ impl Parser{
         }
     }
 
-    pub fn parse<'a>(self: &mut Self, source_filename: &'a str, lexems: &Vec<Lexem>){
+    pub fn parse<'a>(self: &mut Self, lexems: &Vec<Lexem>){
         
-        self.first_stage_parse(source_filename, lexems);
+        self.first_stage_parse(lexems);
 
         let pseudo_instructions = PseudoInstructions::initialize();
 
@@ -228,19 +225,18 @@ impl Parser{
             match token{
                 Token::Instruction { name, args } =>{
                     if pseudo_instructions.keys().collect::<Vec<&String>>().contains(&&name.value){
-                        // dbg!(args);
                         let mut arg_hashmap: HashMap<String, Lexem> = HashMap::new();
 
                         let pseudo = match pseudo_instructions.get(name.value.as_str()){
                             Some(a) => a,
                             None => {
-                                println!("{}:{}:{} Pasrser pseudo_instructions: Impossible Error", self.source_filename, name.row, name.col);
+                                println!("{}:{}:{} Pasrser pseudo_instructions: Impossible Error", name.filename, name.row, name.col);
                                 std::process::exit(1);
                             }
                         }.clone();
 
                         if args.len() != pseudo.0.len(){
-                            println!("{}:{}:{} Expects {} ammount of args got {}", self.source_filename, name.row, name.col, pseudo.0.len(), args.len());
+                            println!("{}:{}:{} Expects {} ammount of args got {}", name.filename, name.row, name.col, pseudo.0.len(), args.len());
                         }
 
                         for (i, arg) in pseudo.0.iter().enumerate(){
@@ -257,14 +253,15 @@ impl Parser{
                                         let arg_name = arg.value.clone();
                                         let new_arg = match arg_hashmap.get(&arg_name){
                                             Some(a) => a.clone(),
-                                            None => Lexem::new(arg_name, arg.ttype, pseudo_name.row, pseudo_name.col)
+                                            None => Lexem::new(arg_name, arg.ttype, pseudo_name.row, pseudo_name.col, pseudo_name.filename.clone())
                                         };
                                         new_args.push(new_arg);
                                     }
-                                    after_pseudo.push(Token::Instruction { name: Lexem::new(name.value, name.ttype, pseudo_name.row, pseudo_name.col), args: new_args });
+                                    after_pseudo.push(Token::Instruction { name, args: new_args });
+                                    // after_pseudo.push(Token::Instruction { name: Lexem::new(name.value, name.ttype, pseudo_name.row, pseudo_name.col, pseudo_name.filename.clone()), args: new_args });
                                 }
                                 Token::Label { name } => {
-                                    println!("{}:{}:{} Currently labels are not possible inside pseudo instruction: {}", "PSEUDO_INSTRUCTION: ".to_string()+pseudo_name.value.as_str(), pseudo_name.row, pseudo_name.col, name.value);
+                                    println!("{}:{}:{} Currently labels are not possible inside pseudo instruction: {}", pseudo_name.filename, pseudo_name.row, pseudo_name.col, name.value);
                                 }
                             }
                         }
@@ -294,17 +291,17 @@ impl Parser{
 
                     if name.value.to_lowercase() == "org"{
                         if args.len() != 1{
-                            println!("{}:{}:{} you need to provide addr", self.source_filename, name.row, name.col);
+                            println!("{}:{}:{} you need to provide addr", name.filename, name.row, name.col);
                             std::process::exit(1);
                         }
 
                         let arg = args[0].clone();
                         if !matches!(arg.ttype, LexemType::Number { .. }){
-                            println!("{}:{}:{} Expected number got {}", self.source_filename, arg.row, arg.col, arg.ttype);
+                            println!("{}:{}:{} Expected number got {}", arg.filename, arg.row, arg.col, arg.ttype);
                             std::process::exit(1);
                         }
 
-                        origin = get_value_from_number_token(self.source_filename.as_str(), &arg);
+                        origin = get_value_from_number_token(&arg);
                         self.cursor = 0;
                         continue;
                     }
@@ -322,7 +319,7 @@ impl Parser{
                                 LexemType::String => to_add += arg.value.len()*2,
                                 LexemType::Number { .. } => to_add += 1,
                                 _ => {
-                                    println!("{}:{}:{} Unexpected token {}", self.source_filename, arg.row, arg.col, arg.ttype);
+                                    println!("{}:{}:{} Unexpected token {}", arg.filename, arg.row, arg.col, arg.ttype);
                                 }
                             }
                         }
@@ -342,7 +339,7 @@ impl Parser{
                                 LexemType::String => to_add += arg.value.len()*4,
                                 LexemType::Number { .. } => to_add += 2,
                                 _ => {
-                                    println!("{}:{}:{} Unexpected token {}", self.source_filename, arg.row, arg.col, arg.ttype);
+                                    println!("{}:{}:{} Unexpected token {}", arg.filename, arg.row, arg.col, arg.ttype);
                                 }
                             }
                         }
@@ -362,7 +359,7 @@ impl Parser{
                                 LexemType::String => to_add += arg.value.len()*8,
                                 LexemType::Number { .. } => to_add += 4,
                                 _ => {
-                                    println!("{}:{}:{} Unexpected token {}", self.source_filename, arg.row, arg.col, arg.ttype);
+                                    println!("{}:{}:{} Unexpected token {}", arg.filename, arg.row, arg.col, arg.ttype);
                                 }
                             }
                         }
@@ -390,12 +387,12 @@ impl Parser{
                             let fix_addr = match labels.get(&arg.value){
                                 Some(x) => x,
                                 None => {
-                                    println!("{}:{}:{} use of undeclared label {}", self.source_filename, arg.row, arg.col, arg.value);
+                                    println!("{}:{}:{} use of undeclared label {}", arg.filename, arg.row, arg.col, arg.value);
                                     std::process::exit(1);
                                 }
                             };
                              
-                            *arg = Lexem::new(format!("{}",fix_addr),LexemType::Number { radix: 10 },arg.row,arg.col);
+                            *arg = Lexem::new(format!("{}",fix_addr),LexemType::Number { radix: 10 },arg.row,arg.col, arg.filename.clone());
 
                         }
                     }

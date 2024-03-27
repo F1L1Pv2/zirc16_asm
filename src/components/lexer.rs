@@ -31,14 +31,15 @@ impl std::fmt::Display for LexemType{
 pub struct Lexem{
     pub value: String,
     pub ttype: LexemType,
+    pub filename: String,
     pub row: usize,
     pub col: usize
 }
 
 
 impl Lexem{
-    pub fn new(value: String, ttype: LexemType, row: usize, col: usize) -> Lexem{
-        Lexem { value, ttype, row, col}
+    pub fn new(value: String, ttype: LexemType, row: usize, col: usize, filename: String) -> Lexem{
+        Lexem { value, ttype, row, col, filename}
     }
 }
 
@@ -109,14 +110,14 @@ impl Lexer{
             let row = self.row;
             let col = self.col;
             let ch = self.chop();
-            self.lexems.push(Lexem::new(ch.to_string(), LexemType::NewLine, row, col));
+            self.lexems.push(Lexem::new(ch.to_string(), LexemType::NewLine, row, col, self.source_filename.clone()));
             return true;
         }
         if SINGLE_LEXEMS.contains(&self.peek().unwrap()) {
             let row = self.row;
             let col = self.col;
             let ch = self.chop();
-            self.lexems.push(Lexem::new(ch.to_string(), LexemType::Single,row, col));
+            self.lexems.push(Lexem::new(ch.to_string(), LexemType::Single,row, col, self.source_filename.clone()));
             return true;
         }
         return false;
@@ -146,7 +147,7 @@ impl Lexer{
                 }
                 
             }
-            self.lexems.push(Lexem::new(lexem.chars().skip(2).collect(), LexemType::Number { radix: 16 }, row,col));
+            self.lexems.push(Lexem::new(lexem.chars().skip(2).collect(), LexemType::Number { radix: 16 }, row,col, self.source_filename.clone()));
             return true;
         }
         
@@ -158,7 +159,7 @@ impl Lexer{
                 }
                 
             }
-            self.lexems.push(Lexem::new(lexem.chars().skip(2).collect(), LexemType::Number { radix: 2 }, row,col));
+            self.lexems.push(Lexem::new(lexem.chars().skip(2).collect(), LexemType::Number { radix: 2 }, row,col, self.source_filename.clone()));
             return true;
         }
         
@@ -170,17 +171,17 @@ impl Lexer{
                 }
 
             }
-            self.lexems.push(Lexem::new(lexem, LexemType::Number { radix: 10 }, row,col));
+            self.lexems.push(Lexem::new(lexem, LexemType::Number { radix: 10 }, row,col, self.source_filename.clone()));
             return true;
         }
 
 
         if REGISTERS.contains(&lexem.to_lowercase().as_str()){
-            self.lexems.push(Lexem::new(lexem.to_lowercase(), LexemType::Register, row,col));
+            self.lexems.push(Lexem::new(lexem.to_lowercase(), LexemType::Register, row,col, self.source_filename.clone()));
             return true;
         }
 
-        self.lexems.push(Lexem::new(lexem, LexemType::Ident, row,col));
+        self.lexems.push(Lexem::new(lexem, LexemType::Ident, row,col, self.source_filename.clone()));
 
         return true;
     }
@@ -240,7 +241,7 @@ impl Lexer{
 
         self.chop();
 
-        self.lexems.push(Lexem { value, ttype: LexemType::String, row, col });
+        self.lexems.push(Lexem::new(value, LexemType::String, row, col, self.source_filename.clone() ));
 
         return true;
     }

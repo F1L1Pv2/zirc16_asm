@@ -55,9 +55,9 @@ fn main() {
 
     let mut parser: Parser = Parser::new();
 
-    parser.parse(&source_filename, &lexer.lexems);
+    parser.parse(&lexer.lexems);
 
-    let mut codegen: CodeGen = CodeGen::new(&source_filename,&parser.tokens, &instruction_lexer.instructions);
+    let mut codegen: CodeGen = CodeGen::new(&parser.tokens, &instruction_lexer.instructions);
 
     codegen.gen();
 
