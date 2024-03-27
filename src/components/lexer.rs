@@ -15,6 +15,18 @@ pub enum LexemType{
     NewLine
 }
 
+impl std::fmt::Display for LexemType{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result{
+        match self{
+            LexemType::Single => {write!(f, "Single")},
+            LexemType::Number {..} => {write!(f, "Number")},
+            LexemType::Ident => {write!(f, "Indent")},
+            LexemType::NewLine => {write!(f, "NewLine")},
+            LexemType::Register => {write!(f, "Register")},
+            LexemType::String => {write!(f, "String")}
+        }
+    }
+}
 #[derive(Debug, Clone)]
 pub struct Lexem{
     pub value: String,
@@ -23,15 +35,16 @@ pub struct Lexem{
     pub col: usize
 }
 
+
 impl Lexem{
     pub fn new(value: String, ttype: LexemType, row: usize, col: usize) -> Lexem{
         Lexem { value, ttype, row, col}
     }
 }
 
-pub struct Lexer<'a>{
-    content: &'a str,
-    source_filename: &'a str,
+pub struct Lexer{
+    content: String,
+    source_filename: String,
     cursor: usize,
     row: usize,
     col: usize,
@@ -49,11 +62,11 @@ pub fn expect_lexem_type(lexem: &Lexem, expected: &[LexemType]) -> bool{
     false
 }
 
-impl Lexer<'_>{
-    pub fn new<'a>(source_filename: &'a str, content: &'a str) -> Lexer<'a>{
+impl Lexer{
+    pub fn new() -> Lexer{
         Lexer{
-            content,
-            source_filename,
+            content: String::new(),
+            source_filename: String::new(),
             cursor: 0,
             row: 1,
             col: 1,
@@ -77,12 +90,21 @@ impl Lexer<'_>{
     }
 
     fn seek_whitespace(self: &mut Self){
-        while self.cursor < self.content.len() && self.peek().unwrap().is_whitespace() && self.peek().unwrap() != '\n'{
+        while self.peek().unwrap().is_whitespace(){
+            if self.peek().unwrap() == '\n'{
+                break;
+            }
             self.chop();
+            if self.cursor >= self.content.len(){
+                break;
+            }
         }
     }
 
     fn chop_single(self: &mut Self) -> bool{
+        if self.cursor >= self.content.len(){
+            return false;
+        }
         if self.peek().unwrap() == '\n'{
             let row = self.row;
             let col = self.col;
@@ -168,6 +190,8 @@ impl Lexer<'_>{
         let col = self.col;
 
         let initial_cursor = self.cursor;
+        let initial_row = self.row;
+        let initial_col = self.col;
 
         if self.cursor >= self.content.len(){
             return false;
@@ -175,6 +199,8 @@ impl Lexer<'_>{
 
         if self.peek().unwrap() != '\"' && self.peek().unwrap() != '\''{
             self.cursor = initial_cursor;
+            self.row = initial_row;
+            self.col = initial_col;
             return false;
         }
 
@@ -222,6 +248,8 @@ impl Lexer<'_>{
     fn seek_comments(self: &mut Self){
         
         let initial_cursor = self.cursor;
+        let initial_row = self.row;
+        let initial_col = self.col;
 
         if self.content.len() - self.cursor >= 2{
 
@@ -240,6 +268,8 @@ impl Lexer<'_>{
                 }
             }else{
                 self.cursor = initial_cursor;
+                self.row = initial_row;
+                self.col = initial_col;
                 return;
             }
         }
@@ -260,14 +290,21 @@ impl Lexer<'_>{
 
         if self.chop_word() {return}
 
+        if self.cursor >= self.content.len(){
+            return;
+        }
+
         
         println!("{}:{}:{} unexpected character: \"{}\" at {}", self.source_filename, self.row, self.col, self.peek().unwrap(), self.cursor);
         std::process::exit(1);
 
     }
 
-    pub fn lex<'a>(self: &mut Self){
+    pub fn lex<'a>(self: &mut Self, source_filename: &'a str, content: &'a str){
         self.cursor = 0;
+        self.content = content.to_string();
+        self.lexems.clear();
+        self.source_filename = source_filename.to_string();
         while self.cursor < self.content.len(){
             self.chop_lexem();
         }

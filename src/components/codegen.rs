@@ -14,7 +14,7 @@ pub fn get_value_from_number_token<'a>(filename: &'a str, lexem: &Lexem) -> usiz
     match lexem.ttype{
         LexemType::Number { radix } => {usize::from_str_radix(&lexem.value, radix as u32).unwrap()}
         _ => {
-            println!("{}:{}:{} Expected number got {:?}", filename, lexem.row, lexem.col,lexem.ttype);
+            println!("{}:{}:{} Expected number got {}", filename, lexem.row, lexem.col,lexem.ttype);
             std::process::exit(1);
         }
     }
@@ -76,7 +76,7 @@ impl CodeGen<'_>{
                                         }
                                     },
                                     _ => {
-                                        println!("{}:{}:{} Unexpected lexem {:?}", self.source_filename, arg.row, arg.col, arg.ttype);
+                                        println!("{}:{}:{} Unexpected lexem {}", self.source_filename, arg.row, arg.col, arg.ttype);
                                         std::process::exit(1);
                                     }
                                 }
@@ -107,7 +107,7 @@ impl CodeGen<'_>{
                                         }
                                     },
                                     _ => {
-                                        println!("{}:{}:{} Unexpected lexem {:?}", self.source_filename, arg.row, arg.col, arg.ttype);
+                                        println!("{}:{}:{} Unexpected lexem {}", self.source_filename, arg.row, arg.col, arg.ttype);
                                         std::process::exit(1);
                                     }
                                 }
@@ -141,7 +141,7 @@ impl CodeGen<'_>{
                                         }
                                     },
                                     _ => {
-                                        println!("{}:{}:{} Unexpected lexem {:?}", self.source_filename, arg.row, arg.col, arg.ttype);
+                                        println!("{}:{}:{} Unexpected lexem {}", self.source_filename, arg.row, arg.col, arg.ttype);
                                         std::process::exit(1);
                                     }
                                 }
@@ -175,7 +175,7 @@ impl CodeGen<'_>{
                                         }
                                         let arg = args.remove(0);
                                         if !matches!(arg.ttype, LexemType::Register){
-                                            println!("{}:{}:{} Expected Register got {:?}", self.source_filename, arg.row, arg.col, arg.ttype);
+                                            println!("{}:{}:{} Expected Register got {}", self.source_filename, arg.row, arg.col, arg.ttype);
                                             std::process::exit(1);
                                         }
                                         

@@ -18,6 +18,11 @@ use components::instruction_lexer::*;
 
 fn main() {
 
+    
+    // let pseudo_instructions = PseudoInstructions::initialize();
+    
+    // dbg!(&pseudo_instructions);
+
     let mut instruction_lexer: InstructionsLexer = InstructionsLexer::new();
 
     instruction_lexer.lex_instructions();
@@ -42,21 +47,19 @@ fn main() {
 
     file.read_to_string(&mut content).unwrap();
 
-    let mut lexer: Lexer = Lexer::new(&source_filename, &content);
+    let mut lexer: Lexer = Lexer::new();
 
-    lexer.lex();
+    lexer.lex(&source_filename, &content);
 
     // dbg!(&lexer.lexems);
 
-    let mut parser: Parser = Parser::new(&source_filename, &lexer.lexems);
+    let mut parser: Parser = Parser::new();
 
-    parser.parse();
+    parser.parse(&source_filename, &lexer.lexems);
 
     let mut codegen: CodeGen = CodeGen::new(&source_filename,&parser.tokens, &instruction_lexer.instructions);
 
     codegen.gen();
-
-    // println!("{:?}", path.extension());
 
     let output_str = match path.extension(){
         Some(a) => path.to_str().unwrap().replace(a.to_str().unwrap(),"zirc16"),

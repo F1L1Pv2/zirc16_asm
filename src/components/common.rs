@@ -50,3 +50,11 @@ pub const INSTRUCTIONS: phf::Map<&'static str, &'static str> = phf_map!{
     "bal" => "10000 {C4} {R4} 00{E1}",
     "ret" => "10001 0000 0000 000"
 };
+
+
+pub const PSEUDO_INSTRUCTIONS: phf::Map<&'static str, &'static str> = phf_map!{
+    "mov a,b" => "
+        xor a, a
+        xor a, b
+    "
+};
