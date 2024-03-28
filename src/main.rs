@@ -1,3 +1,11 @@
+/*
+ made by:
+  ___ _ _    _ ___      ___ 
+ | __/ | |  / | _ \__ _|_  )
+ | _|| | |__| |  _/\ V // / 
+ |_| |_|____|_|_|   \_//___|
+*/
+
 use std::io::Write;
 use std::path::Path;
 use std::{fs::File, io::Read};
