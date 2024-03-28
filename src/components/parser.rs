@@ -106,6 +106,10 @@ fn eval_closure(arg: Lexem, args: [Box<Lexem>; 3]) -> Lexem{
 
     match lhs.ttype{
         LexemType::Number { .. } => {}
+        LexemType::Ident { .. } => {
+            println!("{}:{}:{} Use of undeclared label {}", lhs.filename, lhs.row, lhs.col, lhs.value);
+            std::process::exit(1);
+        }
         _ => {
             println!("{}:{}:{} Expected Number got {}", lhs.filename, lhs.row, lhs.col, lhs.ttype);
             std::process::exit(1);
@@ -122,6 +126,10 @@ fn eval_closure(arg: Lexem, args: [Box<Lexem>; 3]) -> Lexem{
 
     match rhs.ttype{
         LexemType::Number { .. } => {}
+        LexemType::Ident { .. } => {
+            println!("{}:{}:{} Use of undeclared label {}", rhs.filename, rhs.row, rhs.col, rhs.value);
+            std::process::exit(1);
+        }
         _ => {
             println!("{}:{}:{} Expected Number got {}", rhs.filename, rhs.row, rhs.col, rhs.ttype);
             std::process::exit(1);
@@ -571,15 +579,17 @@ impl Parser{
                 }
 
                 LexemType::Ident =>{
-                    let fix_addr = match labels.get(&arg.value){
-                        Some(x) => x,
+                    match labels.get(&arg.value){
+                        Some(x) => {
+                            new_args.push(Lexem::new(format!("{}",x),LexemType::Number { radix: 10 },arg.row,arg.col, arg.filename.clone()));
+                        },
                         None => {
-                            println!("{}:{}:{} use of undeclared label {}", arg.filename, arg.row, arg.col, arg.value);
-                            std::process::exit(1);
+                            new_args.push(arg.clone());
+                            // println!("{}:{}:{} use of undeclared label {}", arg.filename, arg.row, arg.col, arg.value);
+                            // std::process::exit(1);
                         }
                     };
                     
-                    new_args.push(Lexem::new(format!("{}",fix_addr),LexemType::Number { radix: 10 },arg.row,arg.col, arg.filename.clone()));
 
                 }
 

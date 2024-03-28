@@ -6,6 +6,7 @@ main:
 .loop:
     lim R1, .loop
     lsh R1
+    brc z, (data.ballz & 0x3F)
 data:
     .ballz: dw "Hello World!\n",0
 stack:

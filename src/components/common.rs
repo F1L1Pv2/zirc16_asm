@@ -21,6 +21,21 @@ pub const REGISTERS_TO_VAL: phf::Map<&'static str, usize> = phf_map!{
     "r15" => 15,
 };
 
+pub const CONDITIONS_TO_VAL: phf::Map<&'static str, usize> = phf_map!{
+    "z" => 0b0000,
+    "nz" => 0b0001,
+    "c" => 0b0010,
+    "nc" => 0b0011,
+    "p" => 0b0100,
+    "np" => 0b0101,
+    "s" => 0b0110,
+    "ns" => 0b0111,
+    "o" => 0b1000,
+    "no" => 0b1001,
+    "e" => 0b1010,
+    "ne" => 0b1011,
+};
+
 //format {(type)(count in bits)}
 // possible types:
 // R - Register

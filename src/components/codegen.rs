@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{InstructionPart, Lexem, LexemType, Token, REGISTERS_TO_VAL};
+use crate::{InstructionPart, Lexem, LexemType, Token, REGISTERS_TO_VAL, CONDITIONS_TO_VAL};
 
 #[derive(Debug)]
 pub struct CodeGen<'a>{
@@ -194,7 +194,8 @@ impl CodeGen<'_>{
                                         let arg = args.remove(0);
                                         
                                         if arg.ttype == LexemType::Ident{
-                                            println!("{}:{}:{} Error in parser", arg.filename, arg.row, arg.col);
+                                            println!("{}:{}:{} Use of undeclared label {}", arg.filename, arg.row, arg.col, arg.value);
+                                            std::process::exit(1);
                                         }
 
                                         let val = get_value_from_number_token(&arg);
@@ -234,7 +235,36 @@ impl CodeGen<'_>{
                                         bits_str += val.as_str();
                                     }
                                     
-                                    _ => todo!()
+                                    InstructionPart::Condition { size } => {
+                                        if args.len() == 0{
+                                            println!("{}:{}:{} Expected Const", name.filename, name.row, name.col+name.value.len());
+                                            std::process::exit(1);
+                                        }
+                                        let arg = args.remove(0);
+                                        if !matches!(arg.ttype, LexemType::Ident){
+                                            println!("{}:{}:{} Expected Ident got {}", arg.filename, arg.row, arg.col, arg.ttype);
+                                            std::process::exit(1);
+                                        }
+
+                                        let val = match CONDITIONS_TO_VAL.get(&arg.value){
+                                            Some(a) => a.clone(),
+                                            None => {
+                                                println!("{}:{}:{} Invalid Condition {}", arg.filename, arg.row, arg.col, arg.value);
+                                                std::process::exit(1);
+                                            }
+                                        };
+
+                                        let val = format!("{:b}", val);
+                                        
+                                        if val.len() > *size{
+                                            println!("{}:{}:{} Number is too big {}", arg.filename, arg.row, arg.col, arg.value);
+                                            std::process::exit(1);
+                                        }
+                                        
+                                        bits_str+="0".repeat(*size - val.len()).as_str();
+                                        bits_str += val.as_str();
+
+                                    }
                                 }
                             }
 
