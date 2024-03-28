@@ -1,9 +1,11 @@
 use super::common::REGISTERS;
 
 
-pub const SINGLE_LEXEMS: &[char] = &[',',':'];
+pub const SINGLE_LEXEMS: &[char] = &[',',':', '(', ')'];
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+pub const OP_LEXEMS: &[&'static str] = &["+", "-", "/", "*", "&", "|", "^","<<", ">>"];
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum LexemType{
     Ident,
     Register,
@@ -12,7 +14,17 @@ pub enum LexemType{
         radix: usize
     },
     String,
+    Operator,
+    Closure {
+        args: [Box<Lexem>; 3]
+    },
     NewLine
+}
+
+impl PartialEq for Box<Lexem>{
+    fn eq(&self, other: &Self) -> bool {
+        self.ttype.eq(&other.ttype)
+    }
 }
 
 impl std::fmt::Display for LexemType{
@@ -24,6 +36,8 @@ impl std::fmt::Display for LexemType{
             LexemType::NewLine => {write!(f, "NewLine")},
             LexemType::Register => {write!(f, "Register")},
             LexemType::String => {write!(f, "String")}
+            LexemType::Operator => {write!(f, "Operator")}
+            LexemType::Closure {..} => {write!(f, "Closure")}
         }
     }
 }
@@ -50,17 +64,6 @@ pub struct Lexer{
     row: usize,
     col: usize,
     pub lexems: Vec<Lexem>,
-}
-
-pub fn expect_lexem_type(lexem: &Lexem, expected: &[LexemType]) -> bool{
-    
-    for _other in expected{
-        if matches!(lexem.ttype, _other){
-            return true;
-        }
-    }
-
-    false
 }
 
 impl Lexer{
@@ -120,7 +123,37 @@ impl Lexer{
             self.lexems.push(Lexem::new(ch.to_string(), LexemType::Single,row, col, self.source_filename.clone()));
             return true;
         }
+        // if OP_LEXEMS.contains(&self.peek().unwrap()) {
+        //     let row = self.row;
+        //     let col = self.col;
+        //     let ch = self.chop();
+        //     self.lexems.push(Lexem::new(ch.to_string(), LexemType::Operator,row, col, self.source_filename.clone()));
+        //     return true;
+        // }
         return false;
+    }
+
+    fn chop_pattern(self: &mut Self) -> bool{
+        if self.cursor >= self.content.len(){
+            return false;
+        }
+
+
+
+        for pattern in OP_LEXEMS{
+            let pattern = *pattern;
+            if self.content.len() - self.cursor >= pattern.len(){
+                if pattern == &self.content[self.cursor..self.cursor+pattern.len()]{
+                    self.lexems.push(Lexem::new(pattern.to_string(), LexemType::Operator, self.row, self.col, self.source_filename.clone()));
+                    for _ in 0..pattern.len(){
+                        self.chop();
+                    }
+                    return true;
+                }
+            }
+        }
+        
+        false
     }
 
     fn chop_word(self: &mut Self) -> bool{
@@ -259,13 +292,19 @@ impl Lexer{
             let test = self.chop().to_string() + self.chop().to_string().as_str();
             if test == "//"{
                 if self.cursor >= self.content.len(){
+                    self.cursor = initial_cursor;
+                    self.row = initial_row;
+                    self.col = initial_col;
                     return;
                 }
                 while self.peek().unwrap() != '\n'{
-                    if self.cursor >= self.content.len(){
-                        return;
-                    }   
                     self.chop();
+                    if self.cursor >= self.content.len(){
+                        self.cursor = initial_cursor;
+                        self.row = initial_row;
+                        self.col = initial_col;
+                        return;
+                    }
                 }
             }else{
                 self.cursor = initial_cursor;
@@ -286,6 +325,8 @@ impl Lexer{
 
 
         if self.chop_single() {return}
+
+        if self.chop_pattern() {return}
 
         if self.chop_string() {return}
 

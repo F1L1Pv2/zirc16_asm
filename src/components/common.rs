@@ -51,6 +51,16 @@ pub const INSTRUCTIONS: phf::Map<&'static str, &'static str> = phf_map!{
     "ret" => "10001 0000 0000 000"
 };
 
+// Closure ops
+// +  add
+// -  subtract
+// *  multuply
+// /  divide
+// &  bitwise and
+// |  bitwise or
+// ^  bitwise xor
+// << bitshift left
+// >> bitshift right
 
 pub const PSEUDO_INSTRUCTIONS: phf::Map<&'static str, &'static str> = phf_map!{
     "mov a,b" => "
@@ -59,5 +69,9 @@ pub const PSEUDO_INSTRUCTIONS: phf::Map<&'static str, &'static str> = phf_map!{
     ",
     "lsh rd" => "
         add rd, rd
+    ",
+    "limb rd, a" => "
+        lui (a >> 6)
+        lim rd, (a & 0x3F)
     "
 };

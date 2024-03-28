@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{expect_lexem_type, get_value_from_number_token, Lexem, LexemType};
+use crate::{get_value_from_number_token, Lexem, LexemType};
 
 use super::pseudo_instructions::PseudoInstructions;
 
@@ -22,6 +22,96 @@ impl std::fmt::Display for Token{
             Token::Label { .. } => {write!(f, "Label")}
         }
     }
+}
+
+
+fn unpseudo_arg(arg: Lexem, pseudo_name: &Lexem, arg_hashmap: &HashMap<String, Lexem>) -> Lexem{
+    
+    match arg.ttype.clone(){
+        LexemType::Closure { args } => {
+            let mut new_args: Vec<Box<Lexem>> = Vec::new();
+            for arg in args{
+                let arg = *arg;
+                new_args.push(Box::new(unpseudo_arg(arg, pseudo_name, arg_hashmap)));
+            }
+
+            Lexem::new(arg.value, LexemType::Closure { args: [new_args[0].clone(),new_args[1].clone(),new_args[2].clone()] }, arg.row, arg.col, arg.filename)
+        }
+        _ => {
+            let arg_name = arg.value.clone();
+            let new_arg = match arg_hashmap.get(&arg_name){
+                Some(a) => a.clone(),
+                None => Lexem::new(arg_name, arg.ttype, pseudo_name.row, pseudo_name.col, pseudo_name.filename.clone())
+            };
+
+            new_arg
+        }
+    }
+}
+
+fn eval_closure(arg: Lexem, args: [Box<Lexem>; 3]) -> Lexem{
+    
+    let lhs = *args[0].clone();
+    let lhs = match lhs.ttype.clone(){
+        LexemType::Closure { args } => {
+            eval_closure( lhs, args)
+        }
+        _ => lhs
+    };
+
+    match lhs.ttype{
+        LexemType::Number { .. } => {}
+        _ => {
+            println!("{}:{}:{} Expected Number got {}", lhs.filename, lhs.row, lhs.col, lhs.ttype);
+            std::process::exit(1);
+        }
+    }
+
+    let rhs = *args[2].clone();
+    let rhs = match rhs.ttype.clone(){
+        LexemType::Closure { args } => {
+            eval_closure(rhs, args)
+        }
+        _ => rhs
+    };
+
+    match rhs.ttype{
+        LexemType::Number { .. } => {}
+        _ => {
+            println!("{}:{}:{} Expected Number got {}", rhs.filename, rhs.row, rhs.col, rhs.ttype);
+            std::process::exit(1);
+        }
+    }
+    
+
+    let lhs = get_value_from_number_token(&lhs);
+    let rhs = get_value_from_number_token(&rhs);
+
+    let op = *args[1].clone();
+    if op.ttype != LexemType::Operator{
+        println!("{}:{}:{} Expected Operator got {}", op.filename, op.row, op.col, op.ttype);
+        std::process::exit(1);
+    }
+
+    let ret_val: usize;
+
+    match op.value.as_str(){
+        "+" => {ret_val = lhs+rhs},
+        "-" => {ret_val = lhs-rhs},
+        "*" => {ret_val = lhs*rhs},
+        "/" => {ret_val = lhs/rhs},
+        "&" => {ret_val = lhs&rhs},
+        "|" => {ret_val = lhs|rhs},
+        "^" => {ret_val = lhs^rhs},
+        "<<" => {ret_val = lhs<<rhs},
+        ">>" => {ret_val = lhs>>rhs},
+        _ => {
+            println!("{}:{}:{} Invalid Operator {}",op.filename, op.row, op.col, op.value);
+            std::process::exit(1);
+        }
+    }
+
+    Lexem::new(format!("{}", ret_val), LexemType::Number { radix: 10 }, arg.row, arg.col, arg.filename)
 }
 
 pub struct Parser{
@@ -100,11 +190,35 @@ impl Parser{
         return true;
     }
 
+    fn parse_arg(self: &mut Self) -> Lexem{
+        let lexem = self.chop_lexem();
+
+        if lexem.value == "("{
+            
+            
+            let lhs = Box::new(self.parse_arg());
+            let operator = Box::new(self.parse_arg());
+            let rhs = Box::new(self.parse_arg());
+            let lexem = Lexem::new("Closure".to_string(), LexemType::Closure { args: [lhs, operator, rhs] }, lexem.row, lexem.col, lexem.filename);
+
+            let test = self.chop_lexem();
+
+            if test.value == ")"{
+                return lexem;
+            }else{
+                println!("{}:{}:{} Expected \")\" got \"{}\"", test.filename, test.row, test.col, test.value);
+                std::process::exit(1);
+            }
+        }else{
+            return lexem;
+        }
+    }
+
     fn parse_args(self: &mut Self) -> Option<Vec<Lexem>>{
 
         let mut args: Vec<Lexem> = Vec::new();
 
-        let arg_types = &[LexemType::Number{radix: 0} ,LexemType::Ident, LexemType::Register];
+        // let arg_types = &[LexemType::Number{radix: 0} ,LexemType::Ident, LexemType::Register];
 
         if self.cursor >= self.lexems.len(){
             return  Some(Vec::new());
@@ -114,13 +228,8 @@ impl Parser{
             return Some(Vec::new());
         }
 
-        if !expect_lexem_type(&self.peek_lexem().unwrap(), arg_types) {
-            let lexem = self.peek_lexem().unwrap();
-            println!("{}:{}:{} Expected arg got {}", lexem.filename, lexem.row, lexem.col, lexem.ttype);
-            std::process::exit(1);
-        }
 
-        args.push(self.chop_lexem());
+        args.push(self.parse_arg());
 
         if self.cursor >= self.lexems.len(){
             return Some(args);
@@ -134,14 +243,7 @@ impl Parser{
                 std::process::exit(1);
             }
 
-            let arg = self.chop_lexem();
-
-            if !expect_lexem_type(&arg, arg_types){
-                println!("{}:{}:{} Expected arg got {}", arg.filename, arg.row, arg.col, arg.ttype);
-                std::process::exit(1);
-            }
-
-            args.push(arg);
+            args.push(self.parse_arg());
 
             if self.cursor < self.lexems.len() && self.peek_lexem().unwrap().ttype == LexemType::NewLine{
                 break;
@@ -213,10 +315,8 @@ impl Parser{
         }
     }
 
-    pub fn parse<'a>(self: &mut Self, lexems: &Vec<Lexem>){
-        
-        self.first_stage_parse(lexems);
 
+    fn convert_pseudo_instructions(self: &mut Self){
         let pseudo_instructions = PseudoInstructions::initialize();
 
         let mut after_pseudo: Vec<Token> = Vec::new();
@@ -250,12 +350,7 @@ impl Parser{
                                 Token::Instruction { name, args } => {
                                     let mut new_args: Vec<Lexem> = Vec::new();
                                     for arg in args{
-                                        let arg_name = arg.value.clone();
-                                        let new_arg = match arg_hashmap.get(&arg_name){
-                                            Some(a) => a.clone(),
-                                            None => Lexem::new(arg_name, arg.ttype, pseudo_name.row, pseudo_name.col, pseudo_name.filename.clone())
-                                        };
-                                        new_args.push(new_arg);
+                                        new_args.push(unpseudo_arg(arg, pseudo_name, &arg_hashmap));
                                     }
                                     after_pseudo.push(Token::Instruction { name, args: new_args });
                                     // after_pseudo.push(Token::Instruction { name: Lexem::new(name.value, name.ttype, pseudo_name.row, pseudo_name.col, pseudo_name.filename.clone()), args: new_args });
@@ -277,7 +372,9 @@ impl Parser{
             }
         }
         self.tokens = after_pseudo;
+    }
 
+    fn discover_labels(self: &mut Self) -> (Vec<Token>, HashMap<String, usize>) {
         let mut origin: usize = 0;
         self.cursor = 0;
 
@@ -379,23 +476,59 @@ impl Parser{
             }
         }
 
+        (cleaned_tokens, labels)
+    }
+
+    fn fix_args(self: &mut Self, labels: &HashMap<String, usize>, args: &mut Vec<Lexem>) -> Vec<Lexem>{
+        let mut new_args: Vec<Lexem> = Vec::new();
+        for arg in args{
+            match arg.ttype.clone() {
+
+                LexemType::Closure { args } =>{
+                    
+                    let mut nargs = Vec::new();
+                    
+                    for arg in args{
+                        nargs.push(*arg);
+                    }
+                    let args = self.fix_args(labels, &mut nargs);
+
+                    let mut nargs = Vec::new();
+
+                    for arg in args{
+                        nargs.push(Box::new(arg));
+                    }
+
+                    new_args.push(Lexem::new(arg.value.clone(), LexemType::Closure { args: [nargs[0].clone(),nargs[1].clone(),nargs[2].clone()] }, arg.row, arg.col, arg.filename.clone()));
+                }
+
+                LexemType::Ident =>{
+                    let fix_addr = match labels.get(&arg.value){
+                        Some(x) => x,
+                        None => {
+                            println!("{}:{}:{} use of undeclared label {}", arg.filename, arg.row, arg.col, arg.value);
+                            std::process::exit(1);
+                        }
+                    };
+                    
+                    new_args.push(Lexem::new(format!("{}",fix_addr),LexemType::Number { radix: 10 },arg.row,arg.col, arg.filename.clone()));
+
+                }
+
+                _ => new_args.push(arg.clone())
+            }
+        }
+
+        new_args
+    }
+
+    fn calculate_labels(self: &mut Self){
+        let (mut cleaned_tokens, labels) = self.discover_labels();
+
         for arg in cleaned_tokens.iter_mut(){
             match arg{
                 Token::Instruction { name: _, args } =>{
-                    for arg in args{
-                        if arg.ttype == LexemType::Ident{
-                            let fix_addr = match labels.get(&arg.value){
-                                Some(x) => x,
-                                None => {
-                                    println!("{}:{}:{} use of undeclared label {}", arg.filename, arg.row, arg.col, arg.value);
-                                    std::process::exit(1);
-                                }
-                            };
-                             
-                            *arg = Lexem::new(format!("{}",fix_addr),LexemType::Number { radix: 10 },arg.row,arg.col, arg.filename.clone());
-
-                        }
-                    }
+                    *args = self.fix_args(&labels, args);
                 }
                 Token::Label { .. } => {
                     println!("Internal error labels shouldve been removed in this stage");
@@ -405,6 +538,57 @@ impl Parser{
         }
 
         self.tokens = cleaned_tokens;
+    }
+
+    // fn colapse_closure(self: &mut Self, arg: Lexem){
+
+    // }
+
+    fn colapse_closures(self: &mut Self){
+        
+        let mut new_tokens = Vec::new();
+        
+        for token in self.tokens.iter(){
+            match token{
+                Token::Instruction { name, args } => {
+
+                    let mut new_args: Vec<Lexem> = Vec::new();
+
+                    for arg in args{
+                        match arg.ttype.clone(){
+
+                            LexemType::Closure { args } => {
+                                new_args.push(eval_closure(arg.clone(), args))
+                            }
+
+                            _ => {
+                                new_args.push(arg.clone());
+                            }
+                        }
+                    }
+
+                    new_tokens.push(Token::Instruction { name: name.clone(), args: new_args })
+
+                }
+                Token::Label { name } => {
+                    println!("{}:{}:{} This shouldnt exist now", name.filename, name.row, name.col);
+                    std::process::exit(1);
+                }
+            }
+        }
+
+        self.tokens = new_tokens;
+    }
+
+    pub fn parse<'a>(self: &mut Self, lexems: &Vec<Lexem>){
+        
+        self.first_stage_parse(lexems);
+
+        self.convert_pseudo_instructions();
+
+        self.calculate_labels();
+
+        self.colapse_closures();
 
     }
 }
