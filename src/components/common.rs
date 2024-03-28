@@ -1,7 +1,5 @@
 use phf::phf_map;
 
-// TODO: add pseudo instructions
-
 pub const REGISTERS: &[&'static str] = &["r0","r1","r2","r3","r4","r5","r6","r7","r8","r9","r10","r11","r12","r13","r14","r15"];
 
 pub const REGISTERS_TO_VAL: phf::Map<&'static str, usize> = phf_map!{

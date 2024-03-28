@@ -162,7 +162,7 @@ impl Lexer{
         let row = self.row;
         let col = self.col;
 
-        while self.cursor < self.content.len() && self.peek().unwrap().is_alphanumeric(){
+        while self.cursor < self.content.len() && (self.peek().unwrap().is_alphanumeric() || self.peek().unwrap() == '.'){
 
             lexem += self.chop().to_string().as_str();
         }

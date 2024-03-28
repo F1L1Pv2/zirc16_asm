@@ -52,13 +52,13 @@ fn main() {
     lexer.lex(&source_filename, &content);
 
     // dbg!(&lexer.lexems);
-
+    
     let mut parser: Parser = Parser::new();
-
+    
     parser.parse(&lexer.lexems);
-
+    
     // dbg!(&parser.tokens);
-
+    
     let mut codegen: CodeGen = CodeGen::new(&parser.tokens, &instruction_lexer.instructions);
 
     codegen.gen();

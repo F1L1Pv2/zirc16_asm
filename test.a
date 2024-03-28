@@ -3,8 +3,9 @@ main:
     limb R1, stack
     lim R2, 5
     psh R1, R2
-    mov R1, R2
+.loop:
+    lim R1, .loop
     lsh R1
 data:
-    ballz: dw "Hello World!\n",0
+    .ballz: dw "Hello World!\n",0
 stack:
