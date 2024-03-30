@@ -1,6 +1,3 @@
-use super::common::REGISTERS;
-
-
 pub const SINGLE_LEXEMS: &[char] = &[',',':', '(', ')'];
 
 pub const OP_LEXEMS: &[&'static str] = &["+", "-", "/", "*", "&", "|", "^","<<", ">>"];
@@ -8,7 +5,6 @@ pub const OP_LEXEMS: &[&'static str] = &["+", "-", "/", "*", "&", "|", "^","<<",
 #[derive(Debug, Clone, PartialEq)]
 pub enum LexemType{
     Ident,
-    Register,
     Single,
     Number{
         radix: usize
@@ -34,7 +30,6 @@ impl std::fmt::Display for LexemType{
             LexemType::Number {..} => {write!(f, "Number")},
             LexemType::Ident => {write!(f, "Indent")},
             LexemType::NewLine => {write!(f, "NewLine")},
-            LexemType::Register => {write!(f, "Register")},
             LexemType::String => {write!(f, "String")}
             LexemType::Operator => {write!(f, "Operator")}
             LexemType::Closure {..} => {write!(f, "Closure")}
@@ -123,13 +118,6 @@ impl Lexer{
             self.lexems.push(Lexem::new(ch.to_string(), LexemType::Single,row, col, self.source_filename.clone()));
             return true;
         }
-        // if OP_LEXEMS.contains(&self.peek().unwrap()) {
-        //     let row = self.row;
-        //     let col = self.col;
-        //     let ch = self.chop();
-        //     self.lexems.push(Lexem::new(ch.to_string(), LexemType::Operator,row, col, self.source_filename.clone()));
-        //     return true;
-        // }
         return false;
     }
 
@@ -205,12 +193,6 @@ impl Lexer{
 
             }
             self.lexems.push(Lexem::new(lexem, LexemType::Number { radix: 10 }, row,col, self.source_filename.clone()));
-            return true;
-        }
-
-
-        if REGISTERS.contains(&lexem.to_lowercase().as_str()){
-            self.lexems.push(Lexem::new(lexem.to_lowercase(), LexemType::Register, row,col, self.source_filename.clone()));
             return true;
         }
 

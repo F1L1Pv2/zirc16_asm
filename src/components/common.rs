@@ -1,6 +1,15 @@
 use phf::phf_map;
 
-pub const REGISTERS: &[&'static str] = &["r0","r1","r2","r3","r4","r5","r6","r7","r8","r9","r10","r11","r12","r13","r14","r15"];
+//format {(type)(count in bits)}
+// possible types:
+// IMM - Immediate
+// E - Extra
+// + declared
+
+pub const TYPES: phf::Map<&'static str, phf::Map<&'static str, usize>> = phf_map!{
+    "R" => REGISTERS_TO_VAL,
+    "C" => CONDITIONS_TO_VAL
+};
 
 pub const REGISTERS_TO_VAL: phf::Map<&'static str, usize> = phf_map!{
     "r0" => 0,
@@ -36,12 +45,6 @@ pub const CONDITIONS_TO_VAL: phf::Map<&'static str, usize> = phf_map!{
     "ne" => 0b1011,
 };
 
-//format {(type)(count in bits)}
-// possible types:
-// R - Register
-// IMM - Immediate
-// C - Cond
-// E - Extra
 
 pub const INSTRUCTIONS: phf::Map<&'static str, &'static str> = phf_map!{
     "hlt" => "00000 0000 0000 000",

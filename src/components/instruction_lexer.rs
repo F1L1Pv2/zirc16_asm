@@ -10,11 +10,9 @@ pub enum InstructionPart{
     Imm{
         size: usize,
     },
-    Register{
-        size: usize
-    },
-    Condition{
-        size: usize
+    Type{
+        val: String,
+        size: usize,
     },
     Extra{
         size: usize
@@ -126,21 +124,22 @@ impl InstructionsLexer{
         let size = usize::from_str_radix(&size, 10).unwrap();
 
         match ttype.to_uppercase().as_str(){
-            "R"=>{
-                return Some(InstructionPart::Register { size });
-            },
+            // "R"=>{
+            //     return Some(InstructionPart::Register { size });
+            // },
             "IMM" => {
                 return Some(InstructionPart::Imm { size });
             },
-            "C" => {
-                return Some(InstructionPart::Condition { size });
-            },
+            // "C" => {
+            //     return Some(InstructionPart::Condition { size });
+            // },
             "E" => {
                 return Some(InstructionPart::Extra { size });
             }
             _ => {
-                println!("Instruction Lexer: Unknown type {}", ttype);
-                std::process::exit(1);
+                return Some(InstructionPart::Type { val: ttype.to_uppercase().clone(), size });
+                // println!("Instruction Lexer: Unknown type {}", ttype);
+                // std::process::exit(1);
             }
         }
     }

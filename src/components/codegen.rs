@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{InstructionPart, Lexem, LexemType, Token, REGISTERS_TO_VAL, CONDITIONS_TO_VAL};
+use crate::{InstructionPart, Lexem, LexemType, Token, TYPES};
 
 #[derive(Debug)]
 pub struct CodeGen<'a>{
@@ -166,24 +166,40 @@ impl CodeGen<'_>{
                                     InstructionPart::Const { val } => {
                                         bits_str+=val;
                                     },
-                                    InstructionPart::Register { size } => {
+
+                                    InstructionPart::Type { val, size } => {
                                         if args.len() == 0{
-                                            println!("{}:{}:{} Expected Register", name.filename, name.row, name.col+name.value.len());
+                                            println!("{}:{}:{} Expected Argument", name.filename, name.row, name.col+name.value.len());
                                             std::process::exit(1);
                                         }
                                         let arg = args.remove(0);
-                                        if !matches!(arg.ttype, LexemType::Register){
-                                            println!("{}:{}:{} Expected Register got {}", arg.filename, arg.row, arg.col, arg.ttype);
+                                        if !matches!(arg.ttype, LexemType::Ident){
+                                            println!("{}:{}:{} Expected ident got {}", arg.filename, arg.row, arg.col, arg.ttype);
                                             std::process::exit(1);
                                         }
-                                        
-                                        let val = *REGISTERS_TO_VAL.get(arg.value.as_str()).unwrap();
-                                        
+                                        let type_val = val.to_uppercase();
+
+                                        let type_hashmap = match TYPES.get(&type_val){
+                                            Some(a) => a,
+                                            None => {
+                                                println!("{}:{}:{} following type {} doesn't exist", arg.filename, arg.row, arg.col, type_val);
+                                                std::process::exit(1);
+                                            }
+                                        };
+
+
+                                        let val = match type_hashmap.get(arg.value.to_lowercase().as_str()){
+                                            Some(a) => a,
+                                            None => {
+                                                println!("{}:{}:{} type {} doesn't have {}", arg.filename, arg.row, arg.col, type_val, arg.value);
+                                                std::process::exit(1);
+                                            }
+                                        };
+
                                         let val = format!("{:b}", val);
-                                        
+
                                         bits_str+="0".repeat(*size - val.len()).as_str();
-                                        
-                                        bits_str += val.as_str();
+                                        bits_str+=val.as_str();
                                     }
                                     
                                     InstructionPart::Imm { size } => {
@@ -235,36 +251,6 @@ impl CodeGen<'_>{
                                         bits_str += val.as_str();
                                     }
                                     
-                                    InstructionPart::Condition { size } => {
-                                        if args.len() == 0{
-                                            println!("{}:{}:{} Expected Const", name.filename, name.row, name.col+name.value.len());
-                                            std::process::exit(1);
-                                        }
-                                        let arg = args.remove(0);
-                                        if !matches!(arg.ttype, LexemType::Ident){
-                                            println!("{}:{}:{} Expected Ident got {}", arg.filename, arg.row, arg.col, arg.ttype);
-                                            std::process::exit(1);
-                                        }
-
-                                        let val = match CONDITIONS_TO_VAL.get(&arg.value){
-                                            Some(a) => a.clone(),
-                                            None => {
-                                                println!("{}:{}:{} Invalid Condition {}", arg.filename, arg.row, arg.col, arg.value);
-                                                std::process::exit(1);
-                                            }
-                                        };
-
-                                        let val = format!("{:b}", val);
-                                        
-                                        if val.len() > *size{
-                                            println!("{}:{}:{} Number is too big {}", arg.filename, arg.row, arg.col, arg.value);
-                                            std::process::exit(1);
-                                        }
-                                        
-                                        bits_str+="0".repeat(*size - val.len()).as_str();
-                                        bits_str += val.as_str();
-
-                                    }
                                 }
                             }
 
