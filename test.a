@@ -5,7 +5,7 @@ main:
     psh R1, R2
 .loop:
     lim R1, .loop
-    lsh R1
+    lsh R1, 1
     brc z, (data.ballz & 0x3F)
 data:
     .ballz: dw "Hello World!\n",0
