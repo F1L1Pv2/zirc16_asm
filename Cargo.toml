@@ -21,3 +21,4 @@ strip = "symbols"
 
 [dependencies]
 phf = { version = "0.11.2", features = ["macros"] }
+argp = "0.3.0"

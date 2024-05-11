@@ -7,7 +7,7 @@
 */
 
 use std::io::Write;
-use std::path::Path;
+use std::path::PathBuf;
 use std::{fs::File, io::Read};
 
 mod components;
@@ -16,6 +16,7 @@ use components::parser::*;
 use components::codegen::*;
 use components::common::*;
 use components::instruction_lexer::*;
+use components::args::*;
 
 /*
 
@@ -35,21 +36,9 @@ fn main() {
 
     instruction_lexer.lex_instructions();
 
-    let mut args = std::env::args();
+    let args: Args = Args::parse();
 
-    let filename = args.next().unwrap();
-
-    let source_filename = match args.next(){
-        Some(n) => {n},
-        None => {
-            println!("{}: Source Filename wasn't provided", filename);
-            std::process::exit(1);
-        }
-    };
-
-    let path = Path::new(&source_filename);
-
-    let mut file = File::open(path).unwrap();
+    let mut file = File::open(&args.input).unwrap();
 
     let mut content = String::new();
 
@@ -57,7 +46,7 @@ fn main() {
 
     let mut lexer: Lexer = Lexer::new();
 
-    lexer.lex(&source_filename, &content);
+    lexer.lex(&args.input.as_os_str().to_string_lossy(), &content);
 
     // dbg!(&lexer.lexems);
     
@@ -71,16 +60,16 @@ fn main() {
 
     codegen.gen();
 
-    let output_str = match path.extension(){
-        Some(a) => path.to_str().unwrap().replace(a.to_str().unwrap(),"zirc16"),
-        None => path.to_str().unwrap().to_string() + ".zirc16"
+    let output: PathBuf = match args.output {
+        Some(value) => value.with_extension(args.isa),
+        None => args.input.with_extension(args.isa)
     };
 
-    let mut file = File::create(&output_str).unwrap();
+    let mut file = File::create(&output).unwrap();
 
     let _ =file.write(&codegen.bytes);
 
-    println!("Assembled file: {} ({} bytes)", output_str, codegen.bytes.len());
+    println!("Assembled file: {} ({} bytes)", &output.display(), codegen.bytes.len());
     
 
 }
