@@ -22,8 +22,8 @@ impl Args {
         let mut args: Args = argp::parse_args_or_exit(argp::DEFAULT);
 
         args.output = match args.output {
-            Some(value) => Some(value.with_extension(&args.isa)),
-            None => Some(args.input.with_extension(&args.isa))
+            Some(value) => Some(value.with_extension(format!("{}.bin", &args.isa))),
+            None => Some(args.input.with_extension(format!("{}.bin", &args.isa)))
         };
 
         args

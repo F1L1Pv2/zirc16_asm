@@ -7,7 +7,6 @@
 */
 
 use std::io::Write;
-use std::path::PathBuf;
 use std::{fs::File, io::Read};
 
 mod components;
@@ -60,16 +59,9 @@ fn main() {
 
     codegen.gen();
 
-    let output: PathBuf = match args.output {
-        Some(value) => value.with_extension(args.isa),
-        None => args.input.with_extension(args.isa)
-    };
+    let mut file = File::create(&args.output.as_ref().unwrap()).unwrap();
 
-    let mut file = File::create(&output).unwrap();
+    let _ = file.write(&codegen.bytes);
 
-    let _ =file.write(&codegen.bytes);
-
-    println!("Assembled file: {} ({} bytes)", &output.display(), codegen.bytes.len());
-    
-
+    println!("Assembled file: {} ({} bytes)", &args.output.unwrap().display(), codegen.bytes.len());
 }
