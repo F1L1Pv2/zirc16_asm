@@ -4,10 +4,6 @@ use argp::FromArgs;
 /// Assembler made for zirc* architectures developed by Kaktus14
 #[derive(FromArgs, Debug)]
 pub struct Args {
-    /// Name of cpu architecture
-    #[argp(positional)]
-    pub isa: String,
-
     /// Input file path
     #[argp(positional)]
     pub input: PathBuf,
@@ -21,10 +17,14 @@ impl Args {
     pub fn parse() -> Self {
         let mut args: Args = argp::parse_args_or_exit(argp::DEFAULT);
 
+        let isa: String = args.input.with_extension("").extension().unwrap().to_string_lossy().to_string();
+
         args.output = match args.output {
-            Some(value) => Some(value.with_extension(format!("{}.bin", &args.isa))),
-            None => Some(args.input.with_extension("").with_extension(format!("{}.bin", &args.isa)))
+            Some(value) => Some(value.with_extension(format!("{}.bin", isa))),
+            None => Some(args.input.with_extension("").with_extension(format!("{}.bin", isa)))
         };
+
+        dbg!(isa);
 
         args
     }
