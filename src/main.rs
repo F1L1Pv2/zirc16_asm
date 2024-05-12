@@ -6,8 +6,7 @@
  |_| |_|____|_|_|   \_//___|
 */
 
-use std::io::Write;
-use std::{fs::File, io::Read};
+use std::{process, fs::File, io::{Read, Write}};
 
 mod components;
 use components::lexer::*;
@@ -37,7 +36,13 @@ fn main() {
 
     let args: Args = Args::parse();
 
-    let mut file = File::open(&args.input).unwrap();
+    let mut file = match File::open(&args.input) {
+        Ok(file) => file,
+        Err(err) => {
+            eprintln!("{err}");
+            process::exit(1);
+        }
+    };
 
     let mut content = String::new();
 
@@ -59,7 +64,13 @@ fn main() {
 
     codegen.gen();
 
-    let mut file = File::create(&args.output.as_ref().unwrap()).unwrap();
+    let mut file = match File::create(&args.output.as_ref().unwrap()) {
+        Ok(file) => file,
+        Err(err) => {
+            eprintln!("{err}");
+            process::exit(1);
+        }
+    };
 
     let _ = file.write(&codegen.bytes);
 
